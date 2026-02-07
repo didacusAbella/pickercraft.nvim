@@ -57,7 +57,8 @@ local state = {
 	mode = "files", -- "files" | "grep"
 
 	job = nil, -- current running job
-	job_token = 0,
+	job_token = 0, -- token for handling jobs
+	preview_token = 0, -- token for handling preview
 }
 
 -----------------------------------------------------------------------
@@ -268,7 +269,11 @@ end
 -----------------------------------------------------------------------
 -- Preview (internal or external) + line numbers
 -----------------------------------------------------------------------
-local function preview_internal(file, line)
+local function preview_internal(file, line, token)
+	if token ~= state.preview_token then
+		return
+	end
+
 	local ok, content = pcall(fn.readfile, file)
 	if not ok then
 		return
@@ -304,11 +309,15 @@ local function preview_internal(file, line)
 	end
 end
 
-local function preview_external(file)
+local function preview_external(file, token)
 	local cmd = vim.deepcopy(M.config.preview.cmd)
 	vim.list_extend(cmd, { file })
 
 	vim.system(cmd, { text = true }, function(res)
+		if token ~= state.preview_token then
+			return
+		end
+
 		local lines = {}
 		if res.code == 0 and res.stdout then
 			lines = vim.split(res.stdout, "\n", { trimempty = false })
@@ -323,6 +332,9 @@ local function preview_external(file)
 end
 
 function M.update_preview()
+	state.preview_token = state.preview_token + 1
+	local my_token = state.preview_token
+
 	local item = state.results[state.selection]
 	if not item then
 		return
@@ -332,9 +344,9 @@ function M.update_preview()
 	local line = state.mode == "grep" and item.line or nil
 
 	if M.config.preview.mode == "internal" then
-		preview_internal(file, line)
+		preview_internal(file, line, my_token)
 	else
-		preview_external(file)
+		preview_external(file, my_token)
 	end
 end
 
@@ -382,6 +394,7 @@ function M.close()
 	cancel_job()
 
 	state.job_token = state.job_token + 1
+	state.preview_token = state.preview_token + 1
 
 	for _, win in ipairs({
 		state.prompt_win,
