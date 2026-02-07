@@ -57,6 +57,7 @@ local state = {
 	mode = "files", -- "files" | "grep"
 
 	job = nil, -- current running job
+	job_token = 0,
 }
 
 -----------------------------------------------------------------------
@@ -113,8 +114,15 @@ end
 local function run_cmd(cmd, cb)
 	cancel_job()
 
+	state.job_token = state.job_token + 1
+	local my_token = state.job_token
+
 	state.job = vim.system(cmd, { text = true }, function(res)
 		state.job = nil
+
+		if my_token ~= state.job_token then
+			return
+		end
 
 		if res.code == 0 and res.stdout then
 			local lines = vim.split(res.stdout, "\n", { trimempty = true })
@@ -159,10 +167,17 @@ local function run_sorter_cmd(items, cb)
 
 	cancel_job()
 
+	state.job_token = state.job_token + 1
+	local my_token = state.job_token
+
 	local cmd = vim.deepcopy(M.config.sorter_cmd)
 
 	state.job = vim.system(cmd, { text = true, stdin = table.concat(items, "\n") }, function(res)
 		state.job = nil
+
+		if my_token ~= state.job_token then
+			return
+		end
 
 		if res.code == 0 and res.stdout then
 			local lines = vim.split(res.stdout, "\n", { trimempty = true })
@@ -365,6 +380,8 @@ end
 -----------------------------------------------------------------------
 function M.close()
 	cancel_job()
+
+	state.job_token = state.job_token + 1
 
 	for _, win in ipairs({
 		state.prompt_win,
