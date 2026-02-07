@@ -23,6 +23,25 @@ local function get_icon(filename)
 	return icon_cache[ext]
 end
 
+--- -------------------------------------------------------------------
+-- Token Job Class
+--- -------------------------------------------------------------------
+local Token = {}
+Token.__index = Token
+
+function Token:new()
+	return setmetatable({ token = 0 }, Token)
+end
+
+function Token:touch()
+	self.token = self.token + 1
+	return self.token
+end
+
+function Token:valid(id)
+	return id == self.token
+end
+
 -----------------------------------------------------------------------
 -- Config
 -----------------------------------------------------------------------
@@ -57,23 +76,24 @@ local state = {
 	mode = "files", -- "files" | "grep"
 
 	job = nil, -- current running job
-	job_token = 0, -- token for handling jobs
-	preview_token = 0, -- token for handling preview
+	search_token = Token:new(), -- token for handling jobs
+	preview_token = Token:new(), -- token for handling preview
+	debounce_token = Token:new(), -- token for debouncing
 }
 
 -----------------------------------------------------------------------
 -- Utils
 -----------------------------------------------------------------------
 local function debounce(fn, delay)
-	local timer = uv.new_timer()
 	return function(...)
+		local my_token = state.debounce_token:touch()
 		local args = { ... }
-		timer:stop()
-		timer:start(delay, 0, function()
-			vim.schedule(function()
-				fn(unpack(args))
-			end)
-		end)
+		vim.defer_fn(function()
+			if not state.debounce_token:valid(my_token) then
+				return
+			end
+			fn(unpack(args))
+		end, delay)
 	end
 end
 
@@ -115,13 +135,12 @@ end
 local function run_cmd(cmd, cb)
 	cancel_job()
 
-	state.job_token = state.job_token + 1
-	local my_token = state.job_token
+	local my_token = state.search_token:touch()
 
 	state.job = vim.system(cmd, { text = true }, function(res)
 		state.job = nil
 
-		if my_token ~= state.job_token then
+		if not state.search_token:valid(my_token) then
 			return
 		end
 
@@ -168,15 +187,14 @@ local function run_sorter_cmd(items, cb)
 
 	cancel_job()
 
-	state.job_token = state.job_token + 1
-	local my_token = state.job_token
+	local my_token = state.search_token:touch()
 
 	local cmd = vim.deepcopy(M.config.sorter_cmd)
 
 	state.job = vim.system(cmd, { text = true, stdin = table.concat(items, "\n") }, function(res)
 		state.job = nil
 
-		if my_token ~= state.job_token then
+		if not state.search_token:valid(my_token) then
 			return
 		end
 
@@ -270,7 +288,7 @@ end
 -- Preview (internal or external) + line numbers
 -----------------------------------------------------------------------
 local function preview_internal(file, line, token)
-	if token ~= state.preview_token then
+	if not state.preview_token:valid(token) then
 		return
 	end
 
@@ -302,7 +320,7 @@ local function preview_internal(file, line, token)
 			local item = state.results[state.selection]
 			if item and item.line == line then
 				local col_start = item.col - 1
-				local col_end = col_start + #item.match
+				local col_end = col_start + vim.str_utfindex(item.match)
 				highlight_preview_match(line - 1, col_start, col_end)
 			end
 		end
@@ -314,7 +332,7 @@ local function preview_external(file, token)
 	vim.list_extend(cmd, { file })
 
 	vim.system(cmd, { text = true }, function(res)
-		if token ~= state.preview_token then
+		if not state.preview_token:valid(token) then
 			return
 		end
 
@@ -332,8 +350,7 @@ local function preview_external(file, token)
 end
 
 function M.update_preview()
-	state.preview_token = state.preview_token + 1
-	local my_token = state.preview_token
+	local my_token = state.preview_token:touch()
 
 	local item = state.results[state.selection]
 	if not item then
@@ -393,8 +410,9 @@ end
 function M.close()
 	cancel_job()
 
-	state.job_token = state.job_token + 1
-	state.preview_token = state.preview_token + 1
+	state.search_token:touch()
+	state.preview_token:touch()
+	state.debounce_token:touch()
 
 	for _, win in ipairs({
 		state.prompt_win,
@@ -491,7 +509,13 @@ end
 -- File picker
 -----------------------------------------------------------------------
 function M.open_picker()
+	--- State correct initialization
 	state.mode = "files"
+	state.search_token:touch()
+	state.preview_token:touch()
+	state.debounce_token:touch()
+	--- end
+
 	setup_ui()
 
 	local function do_search()
@@ -525,7 +549,12 @@ end
 -- Live grep picker
 -----------------------------------------------------------------------
 function M.live_grep()
+	--- Correct state initialization
 	state.mode = "grep"
+	state.search_token:touch()
+	state.preview_token:touch()
+	state.debounce_token:touch()
+	--- End
 	setup_ui()
 
 	local function do_search()
