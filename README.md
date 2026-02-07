@@ -48,7 +48,6 @@ You can customize pickercraft by passing options to `setup()`:
 
 ```lua
 require("pickercraft").setup({
-  list_cmd = { "ag", "-l" },
   filter_cmd = { "ag", "-g" },
   grep_cmd = { "ag", "--vimgrep" },
   sorter_cmd = { "fzy" },
@@ -60,13 +59,6 @@ require("pickercraft").setup({
 ```
 
 ## Options explained
-
-### list_cmd
-
-Default: `{ "ag", "-l" }`
-
-Used to list all files (initial view of file picker).
-Any command that prints file paths line-by-line can be used here (e.g. fd, rg --files, etc).
 
 ### filter_cmd
 

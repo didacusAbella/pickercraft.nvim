@@ -2,6 +2,7 @@ local M = {}
 
 local api = vim.api
 local fn = vim.fn
+local pkns = api.nvim_create_namespace("pickercraft")
 
 -- optional dependency
 local has_devicons, devicons = pcall(require, "nvim-web-devicons")
@@ -45,7 +46,6 @@ end
 -- Config
 -----------------------------------------------------------------------
 M.config = {
-	list_cmd = { "ag", "-l" },
 	filter_cmd = { "ag", "-g" },
 	grep_cmd = { "ag", "--vimgrep" },
 
@@ -83,7 +83,7 @@ local state = {
 -----------------------------------------------------------------------
 -- Utils
 -----------------------------------------------------------------------
-local function debounce(fn, delay)
+local function debounce(cb, delay)
 	return function(...)
 		local my_token = state.debounce_token:touch()
 		local args = { ... }
@@ -91,7 +91,7 @@ local function debounce(fn, delay)
 			if not state.debounce_token:valid(my_token) then
 				return
 			end
-			fn(unpack(args))
+			cb(unpack(args))
 		end, delay)
 	end
 end
@@ -175,10 +175,6 @@ end
 -----------------------------------------------------------------------
 -- Search commands (generic names)
 -----------------------------------------------------------------------
-local function run_list_cmd(cb)
-	run_cmd(M.config.list_cmd, cb)
-end
-
 local function run_filter_cmd(pattern, cb)
 	local cmd = vim.deepcopy(M.config.filter_cmd)
 	vim.list_extend(cmd, { pattern })
@@ -268,7 +264,14 @@ end
 
 local function highlight_preview_match(line_nr, col_start, col_end)
 	pcall(api.nvim_buf_clear_namespace, state.preview_buf, -1, 0, -1)
-	api.nvim_buf_add_highlight(state.preview_buf, -1, "Search", line_nr, col_start, col_end)
+	vim.hl.range(
+		state.preview_buf,
+		pkns, -- namespace ( -1 = default namespace )
+		"Search", -- highlight group
+		{ line_nr, col_start }, -- start (line, col)
+		{ line_nr, col_end }, -- finish (line, col)
+		{ regtype = "v" } -- optional, charwise
+	)
 end
 
 local function update_results(lines)
@@ -331,7 +334,7 @@ local function preview_internal(file, line, token)
 			local item = state.results[state.selection]
 			if item and item.line == line then
 				local col_start = item.col - 1
-				local col_end = col_start + vim.str_utfindex(item.match)
+				local col_end = col_start + vim.str_utfindex(item.match, "utf-8")
 				highlight_preview_match(line - 1, col_start, col_end)
 			end
 		end
