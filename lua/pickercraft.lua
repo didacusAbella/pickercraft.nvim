@@ -2,7 +2,6 @@ local M = {}
 
 local api = vim.api
 local fn = vim.fn
-local uv = vim.loop
 
 -- optional dependency
 local has_devicons, devicons = pcall(require, "nvim-web-devicons")
@@ -120,6 +119,22 @@ end
 local function get_prompt_text(buf)
 	local line = api.nvim_buf_get_lines(buf, 0, 1, false)[1] or ""
 	return line:gsub("^> ", "")
+end
+
+local function clear_highlights()
+	pcall(api.nvim_buf_clear_namespace, state.result_buf, -1, 0, -1)
+end
+
+local function set_placeholder(text)
+	state.results = {}
+	state.selection = 0
+
+	vim.bo[state.result_buf].modifiable = true
+	api.nvim_buf_set_lines(state.result_buf, 0, -1, false, { text })
+	vim.bo[state.result_buf].modifiable = false
+
+	api.nvim_win_set_cursor(state.result_win, { 1, 0 })
+	clear_highlights()
 end
 
 -----------------------------------------------------------------------
@@ -251,10 +266,6 @@ local function format_result(item)
 	end
 end
 
-local function clear_highlights()
-	pcall(api.nvim_buf_clear_namespace, state.result_buf, -1, 0, -1)
-end
-
 local function highlight_preview_match(line_nr, col_start, col_end)
 	pcall(api.nvim_buf_clear_namespace, state.preview_buf, -1, 0, -1)
 	api.nvim_buf_add_highlight(state.preview_buf, -1, "Search", line_nr, col_start, col_end)
@@ -371,6 +382,10 @@ end
 -- Move selection
 -----------------------------------------------------------------------
 function M.move(delta)
+	if #state.results == 0 then
+		return
+	end
+
 	local new = state.selection + delta
 	if new < 1 then
 		new = 1
@@ -522,9 +537,7 @@ function M.open_picker()
 		local text = get_prompt_text(state.prompt_buf)
 
 		if text == "" then
-			run_list_cmd(function(files)
-				run_sorter_cmd(files, update_results)
-			end)
+			set_placeholder("Type to search files...")
 		else
 			run_filter_cmd(text, function(files)
 				run_sorter_cmd(files, update_results)
@@ -560,6 +573,10 @@ function M.live_grep()
 	local function do_search()
 		local text = get_prompt_text(state.prompt_buf)
 
+		if text == "" then
+			set_placeholder("Type to live grep…")
+			return
+		end
 		run_grep_cmd(text, function(lines)
 			run_sorter_cmd(lines, update_results)
 		end)
