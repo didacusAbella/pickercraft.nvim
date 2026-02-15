@@ -1,12 +1,22 @@
 local function debounce(fn, ms)
-	local timer = vim.loop.new_timer()
+	local timer = nil
+
 	return function(...)
 		local args = { ... }
-		timer:stop()
+		if timer then
+			timer:stop()
+			timer:close()
+			timer = nil
+		end
+
+		timer = vim.uv.new_timer()
 		timer:start(ms, 0, function()
 			vim.schedule(function()
 				fn(unpack(args))
 			end)
+			timer:stop()
+			timer:close()
+			timer = nil
 		end)
 	end
 end
@@ -42,10 +52,18 @@ end
 --- @param selection number
 --- @return nil
 function PickerPresenter:on_move(selection)
+	if not self.model.results or #self.model.results == 0 then
+		return
+	end
+
 	self.view:move(selection, #self.model.results)
+
 	local item = self.model.results[selection]
+	if not item then
+		return
+	end
 	self.model:preview(item.file, function(content)
-		self.view.preview(item, content)
+		self.view:preview(item, content)
 	end)
 end
 

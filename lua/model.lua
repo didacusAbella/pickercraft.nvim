@@ -20,7 +20,6 @@ PickerModel.__index = PickerModel
 --- @return PickerModel
 function PickerModel.new(opts)
 	local self = setmetatable({}, PickerModel)
-
 	self.pipeline = CommandPipeline.new(opts.commands)
 	self.pwipeline = CommandPipeline.new(opts.pcommands)
 	self.results = {}
@@ -52,6 +51,7 @@ function PickerModel:cancel()
 	self.pipeline:cancel()
 	self.pwipeline:cancel()
 	self.is_loading = false
+	self.is_loading_preview = false
 end
 
 --- Parse a pipeline output to vimgrep output
@@ -95,6 +95,7 @@ function PickerModel:preview(file, on_content)
 
 		if err then
 			on_content({ "Cannot show preview" })
+			return
 		end
 		on_content(output)
 	end)

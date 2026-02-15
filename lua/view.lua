@@ -46,7 +46,7 @@ end
 
 local function format_result(item)
 	if not item.match then
-		return get_icon(item) .. item
+		return get_icon(item) .. item.file
 	else
 		return get_icon(item.file) .. string.format("%s:%d:%d: %s", item.file, item.line, item.col, item.match)
 	end
@@ -65,8 +65,7 @@ local PickerView = {}
 PickerView.__index = PickerView
 
 --- Create a new PickerView
---- @param presenter PickerPresenter
-function PickerView.new(presenter)
+function PickerView.new()
 	local self = setmetatable({}, PickerView)
 	self._pb = create_buf()
 	self._rb = create_buf()
@@ -75,7 +74,7 @@ function PickerView.new(presenter)
 	self._pw = nil
 	self._rw = nil
 	self._pww = nil
-	self.presenter = presenter
+	self.presenter = nil
 	vim.bo[self._pb].buftype = "prompt"
 	fn.prompt_setprompt(self._pb, "> ")
 
@@ -222,12 +221,13 @@ function PickerView:preview(item, lines)
 	vim.bo[self._pwb].modifiable = false
 	vim.wo[self._pww].number = true
 	vim.wo[self._pww].relativenumber = false
+	pcall(api.nvim_buf_clear_namespace, self._pwb, pkns, 0, -1)
 	local ft = vim.filetype.match({ filename = item.file })
 
 	if ft and ft ~= "" then
 		vim.bo[self._pwb].filetype = ft
-		vim.bo[self._pwb].suntax = ft
-		pcall(vim.cmd, "aoautocmd FileType " .. ft)
+		vim.bo[self._pwb].syntax = ft
+		pcall(vim.cmd, "doautocmd FileType " .. ft)
 	end
 
 	if item.match then
