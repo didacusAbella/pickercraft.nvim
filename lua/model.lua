@@ -34,7 +34,7 @@ end
 function PickerModel:search(query, on_update)
 	self.is_loading = true
 
-	self.pipeline:run({ input = query }, function(output, err)
+	self.pipeline:run({ input = query, as = "arg" }, function(output, err)
 		self.is_loading = false
 
 		if err then
@@ -90,7 +90,7 @@ end
 function PickerModel:preview(file, on_content)
 	self.is_loading_preview = true
 
-	self.pwipeline:run({ input = file }, function(output, err)
+	self.pwipeline:run({ input = file, as = "arg" }, function(output, err)
 		self.is_loading_preview = false
 
 		if err then
