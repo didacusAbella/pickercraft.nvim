@@ -1,4 +1,4 @@
-local CommandPipeline = require("pickercraft.pipeline")
+local CommandPipeline = require("pipeline")
 
 ---@class PickerResult
 ---@field raw string

@@ -1,6 +1,6 @@
-local PickerPresenter = require("pickercraft.presenter")
-local PickerModel = require("pickercraft.model")
-local PickerView = require("pickercraft.view")
+local PickerPresenter = require("presenter")
+local PickerModel = require("model")
+local PickerView = require("view")
 
 local M = {}
 -----------------------------------------------------------------------
