@@ -39,14 +39,9 @@ local function create_win(buf, row, height)
 	})
 end
 
-local function get_prompt_text(buf)
-	local line = api.nvim_buf_get_lines(buf, 0, 1, false)[1] or ""
-	return line:gsub("^> ", "")
-end
-
 local function format_result(item)
 	if not item.match then
-		return get_icon(item) .. item.file
+		return get_icon(item.file) .. item.file
 	else
 		return get_icon(item.file) .. string.format("%s:%d:%d: %s", item.file, item.line, item.col, item.match)
 	end
@@ -196,6 +191,8 @@ function PickerView:move(line, result_size)
 	end
 
 	self.selection = line
+	api.nvim_win_set_cursor(self._rw, { self.selection, 0 })
+	-- Ensure selection in view
 	local win_h = api.nvim_win_get_height(self._rw)
 	local top = api.nvim_win_get_cursor(self._rw)[1]
 

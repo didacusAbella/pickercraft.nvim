@@ -36,12 +36,11 @@ function CommandPipeline:cancel()
 	self._running = false
 end
 
----@param opts table|nil { input = string|nil, as="stdin"|"arg" }
+---@param opts table|nil { input = string|nil }
 ---@param on_done fun(lines:string[], err:string|nil)
 function CommandPipeline:run(opts, on_done)
 	opts = opts or {}
 	local input = opts.input or ""
-	local as = opts.as or "stdin"
 
 	self._run_id = self._run_id + 1
 	local my_run_id = self._run_id
@@ -77,20 +76,15 @@ function CommandPipeline:run(opts, on_done)
 
 		local command = self.commands[index]
 		if not command then
-			return finish(stdin_data or "")
+			return finish(data or "")
 		end
 
 		local cmd = { command.cmd }
-		vim.list_extend(cmd, command.args or {})
-
-		if as == "arg" and input ~= "" then
-			table.insert(cmd, input)
-			input = ""
-		end
+		vim.list_extend(cmd, command.args(input) or {})
 
 		local handle = vim.system(cmd, {
 			text = true,
-			stdin = as == "stdin" and input or "",
+			stdin = data or "",
 		}, function(obj)
 			vim.schedule(function()
 				if my_run_id ~= self._run_id then
@@ -108,7 +102,7 @@ function CommandPipeline:run(opts, on_done)
 		table.insert(self._handles, handle)
 	end
 
-	step(1, as == "stdin" and input or "")
+	step(1, "")
 end
 
 function CommandPipeline:_kill_all()

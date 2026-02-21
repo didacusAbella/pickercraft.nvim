@@ -7,10 +7,30 @@ local M = {}
 -- Config
 -----------------------------------------------------------------------
 M.config = {
-	file = { cmd = "ag", args = { "-g" } },
-	grep = { cmd = "ag", args = { "--vimgrep" } },
-	sort = { cmd = "fzy" },
-	preview = { cmd = "cat" },
+	file = {
+		cmd = "ag",
+		args = function(input)
+			return { "-g", input }
+		end,
+	},
+	grep = {
+		cmd = "ag",
+		args = function(input)
+			return { "--vimgrep", input }
+		end,
+	},
+	sort = {
+		cmd = "fzy",
+		args = function(input)
+			return { "-e", input }
+		end,
+	},
+	preview = {
+		cmd = "cat",
+		args = function(input)
+			return { input }
+		end,
+	},
 }
 
 -----------------------------------------------------------------------
