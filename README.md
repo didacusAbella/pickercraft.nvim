@@ -64,6 +64,13 @@ require("pickercraft").setup({
 			return { input }
 		end,
 	},
+    map = { -- keyboard settings
+        close = "<Esc>", -- close the picker
+        next = "<Down>", -- select next result
+        prev = "<Up>", -- select prev result
+        open = "<CR>", -- open the selected result
+        search = "<C-k>", -- move from result buffer to prompt buffer
+    }
 })
 ```
 

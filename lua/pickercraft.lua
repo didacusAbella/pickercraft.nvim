@@ -31,6 +31,13 @@ M.config = {
 			return { input }
 		end,
 	},
+	map = {
+		close = "<Esc>",
+		next = "<Down>",
+		prev = "<Up>",
+		open = "<CR>",
+		search = "<C-k>",
+	},
 }
 
 -----------------------------------------------------------------------
@@ -41,7 +48,7 @@ function M.file_finder()
 		commands = { M.config.file, M.config.sort },
 		pcommands = { M.config.preview },
 	})
-	local pv = PickerView.new()
+	local pv = PickerView.new(M.config.map)
 	local pp = PickerPresenter.new(pm, pv)
 	pv.presenter = pp
 	pv:mount()
@@ -55,7 +62,7 @@ function M.live_grep()
 		commands = { M.config.grep, M.config.sort },
 		pcommands = { M.config.preview },
 	})
-	local pv = PickerView.new()
+	local pv = PickerView.new(M.config.map)
 	local pp = PickerPresenter.new(pm, pv)
 	pv.presenter = pp
 	pv:mount()

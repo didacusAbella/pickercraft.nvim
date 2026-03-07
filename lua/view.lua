@@ -60,7 +60,8 @@ local PickerView = {}
 PickerView.__index = PickerView
 
 --- Create a new PickerView
-function PickerView.new()
+--- @param km table a map of keymaps
+function PickerView.new(km)
 	local self = setmetatable({}, PickerView)
 	self._pb = create_buf()
 	self._rb = create_buf()
@@ -74,7 +75,7 @@ function PickerView.new()
 	fn.prompt_setprompt(self._pb, "> ")
 
 	-- prompt keymaps
-	api.nvim_buf_set_keymap(self._pb, "i", "<Esc>", "", {
+	api.nvim_buf_set_keymap(self._pb, "i", km.close, "", {
 		callback = function()
 			self.presenter:on_close()
 		end,
@@ -82,7 +83,7 @@ function PickerView.new()
 		silent = true,
 	})
 
-	api.nvim_buf_set_keymap(self._pb, "i", "<Down>", "", {
+	api.nvim_buf_set_keymap(self._pb, "i", km.next, "", {
 		callback = function()
 			self.presenter:on_move(self.selection + 1)
 		end,
@@ -90,14 +91,14 @@ function PickerView.new()
 		silent = true,
 	})
 
-	api.nvim_buf_set_keymap(self._pb, "i", "<Up>", "", {
+	api.nvim_buf_set_keymap(self._pb, "i", km.prev, "", {
 		callback = function()
 			self.presenter:on_move(self.selection - 1)
 		end,
 		noremap = true,
 		silent = true,
 	})
-	api.nvim_buf_set_keymap(self._pb, "i", "<CR>", "", {
+	api.nvim_buf_set_keymap(self._pb, "i", km.open, "", {
 		callback = function()
 			self.presenter:on_open(self.selection)
 		end,
@@ -106,7 +107,7 @@ function PickerView.new()
 	})
 
 	-- result keymap
-	api.nvim_buf_set_keymap(self._rb, "n", "<CR>", "", {
+	api.nvim_buf_set_keymap(self._rb, "n", km.open, "", {
 		callback = function()
 			self.presenter:on_open(self.selection)
 		end,
@@ -114,7 +115,7 @@ function PickerView.new()
 		silent = true,
 	})
 
-	api.nvim_buf_set_keymap(self._rb, "n", "<C-k>", "", {
+	api.nvim_buf_set_keymap(self._rb, "n", km.search, "", {
 		callback = function()
 			api.nvim_set_current_win(self._pb)
 			vim.cmd("startinsert")
